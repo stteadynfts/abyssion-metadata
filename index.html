@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abyssion — Poseidon's Wrath | Mint on Ink</title>
+<meta name="description" content="Mint Abyssion NFTs — 7,777 octopus warriors on Ink. $0.15 ETH each, max 10 per wallet.">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #050510; color: #e8e8f2; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; text-align: center; }
+  img.hero { width: 100%; border-radius: 16px; border: 1px solid #2a2a4a; }
+  h1 { font-size: 34px; margin: 20px 0 4px; letter-spacing: 1px; }
+  .sub { color: #9a9ab8; margin: 0 0 20px; }
+  .card { background: #101024; border: 1px solid #2a2a4a; border-radius: 14px; padding: 18px; margin: 16px 0; text-align: left; }
+  .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1e1e38; }
+  .row:last-child { border-bottom: none; }
+  .row b { color: #fff; }
+  .qty { display: flex; gap: 10px; align-items: center; justify-content: center; margin: 14px 0; }
+  .qty button { width: 44px; height: 44px; font-size: 22px; border-radius: 10px; border: 1px solid #3a3a5e; background: #1a1a33; color: #fff; cursor: pointer; }
+  .qty span { font-size: 24px; min-width: 40px; }
+  button.big { width: 100%; padding: 15px; font-size: 18px; font-weight: 700; border: none; border-radius: 12px; cursor: pointer; background: #6c5ce7; color: #fff; }
+  button.big:disabled { background: #33334d; color: #888; cursor: not-allowed; }
+  button.ghost { background: transparent; border: 1px solid #3a3a5e; color: #cfcfea; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 15px; }
+  #status { margin-top: 14px; font-size: 14px; color: #9a9ab8; word-break: break-all; }
+  #status a { color: #8ab4ff; }
+  .links { margin-top: 18px; font-size: 14px; }
+  .links a { color: #8ab4ff; text-decoration: none; margin: 0 8px; }
+  .warn { font-size: 13px; color: #b8a86a; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="hero" src="images/cover.webp" alt="Abyssion — Poseidon's Wrath">
+  <h1>🌊 ABYSSION</h1>
+  <p class="sub">Poseidon's Wrath — 7,777 octopus warriors on Ink</p>
+
+  <div class="card">
+    <div class="row"><span>Mint price</span><b id="price">…</b></div>
+    <div class="row"><span>Minted</span><b id="minted">…</b></div>
+    <div class="row"><span>Max per wallet</span><b>10</b></div>
+    <div class="row"><span>Max per transaction</span><b>10</b></div>
+    <div class="row"><span>Your wallet</span><b id="wallet">not connected</b></div>
+    <div class="row"><span>You minted</span><b id="yours">—</b></div>
+    <div class="row"><span>Network</span><b>Ink (57073)</b></div>
+  </div>
+
+  <div class="qty">
+    <button id="minus" type="button">−</button>
+    <span id="qty">1</span>
+    <button id="plus" type="button">+</button>
+  </div>
+  <div id="total" style="margin-bottom:12px;color:#cfcfea">Total: …</div>
+
+  <button class="big" id="connect">Connect Wallet</button>
+  <button class="big" id="mint" style="display:none;margin-top:10px" disabled>Mint</button>
+  <div style="margin-top:10px"><button class="ghost" id="switch" type="button">Switch to Ink network</button></div>
+
+  <div id="status"></div>
+
+  <div class="links">
+    <a href="https://opensea.io/collection/abyssion-235579351" target="_blank" rel="noopener">OpenSea collection</a>
+    <a href="https://explorer.inkonchain.com/address/0x650ac4B7875f90004A3421F102e389aE9Ee64a34" target="_blank" rel="noopener">Contract on explorer</a>
+  </div>
+  <p class="warn">Only mint from this page or the official OpenSea link above. Contract: 0x650ac4B7875f90004A3421F102e389aE9Ee64a34 (Ink). Holders are eligible for the $Abyss token airdrop, weighted by rarity.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+<script>
+const CONTRACT = "0x650ac4B7875f90004A3421F102e389aE9Ee64a34";
+const ABI = [
+  "function mintPrice() view returns (uint256)",
+  "function totalMinted() view returns (uint256)",
+  "function MAX_SUPPLY() view returns (uint256)",
+  "function MAX_PER_WALLET() view returns (uint256)",
+  "function mintOpen() view returns (bool)",
+  "function mintedByWallet(address) view returns (uint256)",
+  "function mint(uint256 quantity) payable"
+];
+const INK = { chainId: "0xdfad", chainName: "Ink", nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 }, rpcUrls: ["https://rpc-gel.inkonchain.com"], blockExplorerUrls: ["https://explorer.inkonchain.com"] };
+const RPC = "https://rpc-gel.inkonchain.com";
+let provider, signer, contract, account = null, price = 0n, qty = 1, minted = 0n, supply = 7777n;
+
+const $ = id => document.getElementById(id);
+function setStatus(msg, link) {
+  $("status").innerHTML = link ? msg + ' <a href="' + link + '" target="_blank" rel="noopener">View transaction</a>' : msg;
+}
+function fmtEth(wei) { return Number(ethers.formatEther(wei)).toFixed(6).replace(/\.?0+$/, "") + " ETH"; }
+function refreshTotal() {
+  $("qty").textContent = qty;
+  $("total").textContent = "Total: " + fmtEth(price * BigInt(qty)) + " + gas";
+  $("mint").textContent = "Mint " + qty + " Abyssion";
+  $("mint").disabled = !account || !price;
+}
+async function refreshStats() {
+  try {
+    const ro = new ethers.JsonRpcProvider(RPC);
+    const c = new ethers.Contract(CONTRACT, ABI, ro);
+    price = await c.mintPrice();
+    minted = await c.totalMinted();
+    supply = await c.MAX_SUPPLY();
+    const open = await c.mintOpen();
+    $("price").textContent = fmtEth(price) + " (~$0.15)";
+    $("minted").textContent = minted.toString() + " / " + supply.toString();
+    if (!open) setStatus("Mint is currently closed.");
+    if (account) {
+      $("yours").textContent = (await c.mintedByWallet(account)).toString();
+    }
+    refreshTotal();
+  } catch (e) { setStatus("Could not read contract: " + e.message); }
+}
+$("minus").onclick = () => { if (qty > 1) { qty--; refreshTotal(); } };
+$("plus").onclick = () => { if (qty < 10) { qty++; refreshTotal(); } };
+$("switch").onclick = async () => {
+  if (!window.ethereum) { setStatus("No wallet found. Install MetaMask or Rabby."); return; }
+  try {
+    await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: INK.chainId }] });
+  } catch (e) {
+    if (e.code === 4902) {
+      await window.ethereum.request({ method: "wallet_addEthereumChain", params: [INK] });
+    } else { setStatus("Could not switch network: " + (e.message || e)); }
+  }
+};
+$("connect").onclick = async () => {
+  if (!window.ethereum) { setStatus("No wallet found. Install MetaMask or Rabby, then reload this page."); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send("eth_requestAccounts", []);
+    account = accounts[0];
+    signer = await provider.getSigner();
+    contract = new ethers.Contract(CONTRACT, ABI, signer);
+    $("wallet").textContent = account.slice(0, 6) + "…" + account.slice(-4);
+    $("connect").style.display = "none";
+    $("mint").style.display = "block";
+    setStatus("Connected. Make sure you are on the Ink network (chain 57073).");
+    await refreshStats();
+  } catch (e) { setStatus("Connection failed: " + (e.message || e)); }
+};
+$("mint").onclick = async () => {
+  if (!contract || !account) return;
+  try {
+    const net = await provider.getNetwork();
+    if (net.chainId !== 57073n) { setStatus("Please switch to the Ink network (chain 57073) first."); return; }
+    setStatus("Sending transaction… confirm in your wallet.");
+    const tx = await contract.mint(qty, { value: price * BigInt(qty) });
+    setStatus("Transaction sent: " + tx.hash, "https://explorer.inkonchain.com/tx/" + tx.hash);
+    await tx.wait();
+    setStatus("✅ Minted " + qty + " Abyssion! Token(s) will appear on OpenSea shortly.", "https://explorer.inkonchain.com/tx/" + tx.hash);
+    await refreshStats();
+  } catch (e) { setStatus("Mint failed: " + (e.reason || e.message || e)); }
+};
+refreshStats();
+</script>
+</body>
+</html>
