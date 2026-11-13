@@ -1,0 +1,13 @@
+{
+  "name": "Abyssion",
+  "symbol": "ABYSS",
+  "decimals": 18,
+  "description": "Abyssion ($ABYSS) — the token of the Abyssion NFT collection on Ink. 7,777 octopus warriors, forged in the deep ink. Total supply 1,000,000,000 $ABYSS. 20% airdropped to NFT holders by rarity (Common 10,000 / Uncommon 20,000 / Rare 40,000 / Legendary 80,000 / Super Legendary 144,404). Transfers are locked until all 7,777 NFTs are minted.",
+  "image": "https://raw.githubusercontent.com/stteadynfts/abyssion-metadata/main/token-logo.webp",
+  "external_link": "https://opensea.io/collection/abyssion-807694234",
+  "properties": {
+    "chain": "Ink (57073)",
+    "nft_contract": "0xb28b6EE476A6dB7B2D5552f1695C4B6fE5Af0a91",
+    "total_supply": "1000000000"
+  }
+}
